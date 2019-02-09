@@ -4,7 +4,7 @@ Beeing a synergy-project betwen "BME680_UniversalSensor" and "Raum(-luft)sensor 
 Issued by @hdgucken and @herrmannj @FHEM.de
 
 Using BOSCH Sensortec static libalgosec.a for ESP8266  BSEC V1.4.7.1.
-which need some additional compiler Arduino settings, according BSEC prerequisites.
+Which need some additional compiler Arduino settings, according BSEC prerequisites.
 
 There are a lot of configurable additional sensors:
 DHT22
@@ -12,6 +12,8 @@ BH1750
 MH-Z19
 etc...
 Multiple protocols: UDP or LaCrosse via RFM69CW
+
+Intentioned to be compiled by Arduino IDE or Visual Micro, using MS Visual Studio VS2017 community edition.
 
 Prelimininay stuff:
 ===================
