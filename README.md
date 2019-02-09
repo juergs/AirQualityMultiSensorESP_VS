@@ -3,7 +3,7 @@
 Beeing a synergy-project betwen "BME680_UniversalSensor" and "Raum(-luft)sensor (Temp, Hum, Co2, VOC, LUX)"
 Issued by @hdgucken and @herrmannj @FHEM.de
 
-Using BOSCH Sensortec static libalgosec.a for ESP8266  BSEC V1.4.7.1.
+Using BOSCH Sensortec static libalgosec.a library for ESP8266  BSEC V1.4.7.1.
 Which need some additional compiler Arduino settings, according BSEC prerequisites.
 
 There are a lot of configurable additional sensors:
