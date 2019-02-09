@@ -1,6 +1,19 @@
-# BME680_UniversalSensor
+# AirQualityMultiSensorESP
 
-This project is based on my cc_sensor, HCS has made some changes to upgrade it to the UniversalSensor, many thanks to HCS !
+Beeing a synergy-project betwen "BME680_UniversalSensor" and  "Raum(-luft)sensor (Temp, Hum, Co2, VOC, LUX)"
+Issued by @hdgucken and @herrmannj @FHEM.de
+
+Using BOSCH Sensortec static libalgosec.a for ESP8266  BSEC V1.4.7.1.
+
+There are a lot of configurable additional sensors:
+DHT22
+BH1750
+MH-Z19
+etc...
+Multiple protocols: UDP or LaCrosse via RFM69CW
+
+Prelimininay stuff:
+This project is based on hdguckens cc_sensor, HCS@fhem has made some changes to upgrade it to the UniversalSensor, many thanks to HCS !
 The main component is an ESP8266 nodemcu, but i dont use the wifi section, wireless transmission is done by an RFM69CW module.
 Since V3.0 you can use ESP8266 based NodeMCU/Wemos D1 mini OR STM32F103Cx based BluPill/Maple mini boards !
 Hardware setup you can find in the sketch.
