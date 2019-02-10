@@ -15,6 +15,26 @@ Multiple protocols: UDP or LaCrosse via RFM69CW
 
 Intentioned to be compiled by Arduino IDE or Visual Micro, using MS Visual Studio VS2017 community edition.
 
+Hardware:
+Wemos D1 oder NodeMCU
+BME680-Breakout-Board (OSH) oder besser PeMues-Kombi: BME680+BH1750 Breakout
+OLED Display: "0,96 Zoll I2C IIC 12864 128X64 Pixel OLED LCD Display Modul SSD1306 Chip 4 Pin"
+TFT_1:  "ST7735 128x160" (Sainsmart) "1.8 SPI TFT LCD Display Module 128x160 Chip ST7735/ILI9341"
+TFT_2:  WEMOS TFT 2.4 Touch Shield (hier) 320 × 240 Pixel, TFT-Treiber IC: ILI9341
+TFT_3:  ePaper-Hat 2,7 inch, 274x176 Pixel, "Tri-Color 2.7 inch E-Ink Display Module"
+Platine von PapaRomeo
+MH-Z19 (Ali) + iAQcore (AMS) + BME680 (Reichelt)[/url]
+
+Arduino Libraries:
+ESP8266(Wemos) TFT_eSPI
+BSEC-Installation, siehe z.B. hier: HowTo und hier BSEC-Arduino-library
+BME_680_Driver: BoschSensortec
+EEPROM-Lib
+ESP8266core (WiFi)
+MH-Z19-Lib
+
+Reference Project: https://forum.fhem.de/index.php?topic=97161.msg903521#msg903521
+
 Prelimininay stuff:
 ===================
 
