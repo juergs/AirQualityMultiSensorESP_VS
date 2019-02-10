@@ -1,18 +1,21 @@
-// Visual Micro is in vMicro>General>Tutorial Mode
-// 
 /*
+    * Visual Micro is in vMicro>General>Tutorial Mode
+    * ===============================================
+
     Name:       AirQualityMultiSensorESP_VS.ino
     Created:	09.02.2019 11:46:49
     Author:     juergs@fhem
-*/
+    Copyright:  BoschSensortec: see "BoschCopyrightCredentials.txt"
+
+    ***********************************************************************************/
 
 // Define User Types below here or use a .h file
-//
-/***********************************************************************************************************************/
-/* select your hardware and options */
+/*==============================================*/
+/*--- select your hardware options */
 #define VERSION                 1.0f
 #define HAS_RFM69               false   //is auto detected, if not found, sensor works without RFM69, data only on serial port
 #define HAS_OLED                true    //is auto detected, if not found, sensor works without OLED (SH1106 or SSD1306)
+#define HAS_TFT                 true    //is auto detected, if not found, sensor works without OLED (SH1106 or SSD1306)
 #define HAS_LIGHTSENSOR         false   //is auto detected, if not found, sensor works without BH1750
 #define VCC_MEASURE             true    //if not needed, you can disable it here
 #define HAS_DHT22               true    //if not needed, you can disable it here
@@ -28,9 +31,9 @@
 #define LED_ESP_NODEMCU         D0
 #define LEDpin                  LED_ESP_BUILTIN     //auto or set pin of your choice
 
-/***********************************************************************************************************************/
-/* header files                                                                                                        */
-/***********************************************************************************************************************/
+/*===============================================*/
+/* header files                                  */
+/*===============================================*/
 #include <Arduino.h>
 
 //--- hardware 
@@ -58,13 +61,13 @@
     #include "AS_BH1750.h"
 #endif
 
-#if HAS_MHZ
+#if HAS_MHZ19
     #include <MHZ.h>
 #endif 
 
 #if HAS_IAQ_CORE
     #include "iAQcore.h" // iAQ-Core driver
-#endif // HAS_IAQ_CORE
+#endif  //--- HAS_IAQ_CORE
 
 #if HAS_DHT22
     #include <DHT.h>
@@ -102,34 +105,32 @@
     #include <WiFiUdp.h>
 #endif
 
-
-
 /*=================*/
-/* Variables       */
+/*   Variables     */
 /*=================*/
 
 //-- multicast declarations
 WiFiUDP         Udp;
 IPAddress       ipMulti(239, 255, 255, 250);    // site-local
-unsigned int    portMulti = 2085;     // port
-char            incomingPacket[255];             // UDP in-buffer
-char            message[512];       //--- udp message to send
+unsigned int    portMulti = 2085;               // port
+char            incomingPacket[255];            // UDP in-buffer
+char            message[512];                   //--- udp message to send
 
 //--- timer settings
-unsigned long   prevLedMillis = millis(); // counter main loop for signaling led
-unsigned long   prevDhtMillis = millis(); // counter main loop for dht
-unsigned long   prevIaqMillis = millis(); // counter main loop for iaq
-unsigned long   prevMhz19Millis = millis(); // counter main loop for MH-Z19
-unsigned long   prevLdrMillis = millis(); // counter main loop for LDR
+unsigned long   prevLedMillis = millis();       // counter main loop for signaling led
+unsigned long   prevDhtMillis = millis();       // counter main loop for dht
+unsigned long   prevIaqMillis = millis();       // counter main loop for iaq
+unsigned long   prevMhz19Millis = millis();     // counter main loop for MH-Z19
+unsigned long   prevLdrMillis = millis();       // counter main loop for LDR
 
-                                          //--- signal LEDs
-unsigned long   sigLedOn = 50;       // ms for led on
-unsigned long   sigLedOff = 450;      // ms for led off
-unsigned long   intervalDht = 10000;    // default
-unsigned long   intervalIaq = 10000;    // default
-unsigned long   intervalMhz19 = 10000;    // default
-unsigned long   intervalLdr = 1000;    // default
-unsigned long   intervalLed = 0;        // 
+//--- signal LEDs
+unsigned long   sigLedOn = 50;                  // ms for led on
+unsigned long   sigLedOff = 450;                // ms for led off
+unsigned long   intervalDht = 10000;            // default
+unsigned long   intervalIaq = 10000;            // default
+unsigned long   intervalMhz19 = 10000;          // default
+unsigned long   intervalLdr = 1000;             // default
+unsigned long   intervalLed = 0;                // 
 
 uint8_t         NODEID;
 float           TEMPOFFSET;
@@ -137,7 +138,7 @@ float           ALTITUDE;
 HandleEeprom    eeprom;
 
 char            serviceMsg[512];
-Ticker          serviceMessageTimer;           // cyclic service message (alive)
+Ticker          serviceMessageTimer;            // cyclic service message (alive)
 
 #if HAS_MHZ19
     char mhz19Msg[32];
@@ -169,25 +170,25 @@ Ticker          serviceMessageTimer;           // cyclic service message (alive)
 #endif
 
 #if HAS_RFM69
-    unsigned long DATA_RATE = 17241ul;    //default data rate (for transmit on RFM69)
-    unsigned long INITIAL_FREQ = 868300;     //default frequency in kHz (5 kHz steps, 860480 ... 879515)
-    bool RFM69 = false;      //if RFM69 is not detected
-    uint8_t loop_count_lim = 5;          //time to wait between data transmissions (20: 20 * 3sec = 60sec)
+    unsigned long DATA_RATE = 17241ul;      //default data rate (for transmit on RFM69)
+    unsigned long INITIAL_FREQ = 868300;    //default frequency in kHz (5 kHz steps, 860480 ... 879515)
+    bool RFM69 = false;                     //if RFM69 is not detected
+    uint8_t loop_count_lim = 5;             //time to wait between data transmissions (20: 20 * 3sec = 60sec)
     uint8_t loop_counter;
-    /* RFM69, PIN-config SPI (GPIO XX or pin Dx): */
+    /*--- RFM69, PIN-config SPI (GPIO XX or pin Dx): */
     #ifdef ESP8266
-    #define RFM_SS             D8          //15   SS pin -> RFM69 (NSS)  //for both Soft- and HW-SPI
-    #define RFM_MISO           D6          //12 MISO pin <- RFM69 (MOSI) //only used by soft spi
-    #define RFM_MOSI           D7          //13 MOSI pin -> RFM69 (MISO) //only used by soft spi
-    #define RFM_SCK            D5          //14  SCK pin -> RFM69 (SCK)  //only used by soft spi
+        #define RFM_SS             D8           //15    SS pin -> RFM69 (NSS)  //for both Soft- and HW-SPI
+        #define RFM_MISO           D6           //12  MISO pin <- RFM69 (MOSI) //only used by soft spi
+        #define RFM_MOSI           D7           //13  MOSI pin -> RFM69 (MISO) //only used by soft spi
+        #define RFM_SCK            D5           //14  SCK  pin -> RFM69 (SCK)  //only used by soft spi
     #elif defined(__STM32F1__)
-    #define RFM_SS             PA4         //  SS pin -> RFM69 (NSS)  //for both Soft- and HW-SPI
-    #define RFM_SCK            PA5         // SCK pin -> RFM69 (SCK)  //only used by soft spi
-    #define RFM_MISO           PA6         //MISO pin <- RFM69 (MOSI) //only used by soft spi
-    #define RFM_MOSI           PA7         //MOSI pin -> RFM69 (MISO) //only used by soft spi
+        #define RFM_SS             PA4         // SS   pin -> RFM69 (NSS)  //for both Soft- and HW-SPI
+        #define RFM_SCK            PA5         // SCK  pin -> RFM69 (SCK)  //only used by soft spi
+        #define RFM_MISO           PA6         // MISO pin <- RFM69 (MOSI) //only used by soft spi
+        #define RFM_MOSI           PA7         // MOSI pin -> RFM69 (MISO) //only used by soft spi
     #endif
-    RFMxx                      rfm(RFM_MOSI, RFM_MISO, RFM_SCK, RFM_SS, SOFT_SPI);
 
+    RFMxx  rfm(RFM_MOSI, RFM_MISO, RFM_SCK, RFM_SS, SOFT_SPI);
 #endif
    
 #if HAS_OLED
@@ -206,13 +207,12 @@ Ticker          serviceMessageTimer;           // cyclic service message (alive)
     #endif
 #endif
 
-                              
+//=====================================================                              
 //--- Define Function Prototypes that use User Types below here or use a .h file
 //--- Define Functions below here or use other .ino or cpp files
-
-
 //=====================================================
 //=====================================================
+
 /* blink led */
 static void blink(byte pin, byte n = 3, int del = 50)
 {
@@ -841,71 +841,61 @@ void setup()
         {
             RFM69 = true; //RFM69 is present
             loop_counter = loop_count_lim; //to send data at startup
-    #if HAS_OLED
-            if (OLED)
-            {
+            #if HAS_OLED
                 display.println("RFM69 gefunden.");
                 display.display();
-            }
-    #endif
+            #endif
+
             Serial.print("RFM69  init ... ");
 
             rfm.InitializeLaCrosse();
-    #if DEBUG
-            Serial.println();
-            Serial.println("Init LaCrosse done");
-    #endif
+    
+            #if DEBUG
+                Serial.println();
+                Serial.println("Init LaCrosse done");
+            #endif
 
             rfm.SetFrequency(INITIAL_FREQ);
             float init_freq = float(INITIAL_FREQ);
-    #if HAS_OLED
-            if (OLED)
-            {
+
+            #if HAS_OLED
                 display.print("Frequenz: ");
                 display.print(init_freq / 1000, 3);
                 display.println(" MHz");
-            }
-    #endif
-    #if DEBUG
-            Serial.print("Set frequency to ");
-            Serial.print(init_freq / 1000, 3);
-            Serial.println(" MHz");
-    #endif
+            #endif
+
+            #if DEBUG
+                Serial.print("Set frequency to ");
+                Serial.print(init_freq / 1000, 3);
+                Serial.println(" MHz");
+            #endif
 
             rfm.SetDataRate(DATA_RATE);
-    #if HAS_OLED
-            if (OLED)
-            {
+
+            #if HAS_OLED
                 display.print("Baudrate: ");
                 display.print(DATA_RATE);
                 display.println(" Baud");
-            }
-    #endif
-    #if DEBUG
-            Serial.print("Set datarate to ");
-            Serial.print(DATA_RATE);
-            Serial.println(" bps");
-    #endif
+            #endif
+            #if DEBUG
+                Serial.print("Set datarate to ");
+                Serial.print(DATA_RATE);
+                Serial.println(" bps");
+            #endif
 
             rfm.PowerDown(); // sleep to save power
             Serial.println("done");
-    #if HAS_OLED
-            if (OLED)
-            {
+            #if HAS_OLED
                 display.println("RFM69 bereit.");
                 display.display();
-            }
-    #endif
+            #endif
         }
         else
         {
-    #if HAS_OLED
-            if (OLED)
-            {
+            #if HAS_OLED
                 display.println("kein RFM69 gefunden!");
                 display.display();
-            }
-    #endif
+            #endif
             Serial.println("RFM69 not found, no wireless transmission !");
         }
     #endif
@@ -914,112 +904,90 @@ void setup()
     Serial.print("BME680 init ... ");
 
     #if HAS_OLED
-        if (OLED)
-        {
-            display.print("BME680 init...");
-            display.display();
-        }
+        display.print("BME680 init...");
+        display.display();
     #endif
 
     /* Call to the function which initializes the BSEC library
     * Switch on low-power mode and provide no temperature offset
     * for UltraLowPower Mode change following line to:
     * ret = bsec_iot_init(BSEC_SAMPLE_RATE_ULP, ... */
-    ret = bsec_iot_init(BSEC_SAMPLE_RATE_LP, TEMPOFFSET, bus_write, bus_read, sleep, state_load, config_load);
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    return_values_init ret = bsec_iot_init(BSEC_SAMPLE_RATE_LP, TEMPOFFSET, bus_write, bus_read, sleep, state_load, config_load);
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     if (ret.bme680_status)
     {
-        /* Could not intialize BME680 */
+        /*--- could not intialize BME680 */
         Serial.println("Error while initializing, BME680 connected ?");
-        #if HAS_OLED
-                if (OLED)
-                {
-                    display.println();
-                    display.println("BME680 init. Fehler !");
-                    display.println("nicht angeschlossen ?");
-                    display.display();
-                }
+        #if HAS_OLED               
+            display.println();
+            display.println("BME680 init. Fehler !");
+            display.println("nicht angeschlossen ?");
+            display.display();               
         #endif
-        return; //jump to main loop
+        return; //--- jump to main loop
     }
     else if (ret.bsec_status)
     {
         /* Could not intialize BSEC library */
         Serial.println("Error while initializing BSEC library !");
-        #if HAS_OLED
-            if (OLED)
-            {
-                display.println();
-                display.println("BSEC init. Fehler !");
-                display.display();
-            }
+        #if HAS_OLED            
+            display.println();
+            display.println("BSEC init. Fehler !");
+            display.display();            
         #endif
         return; //jump to main loop
     }
 
     Serial.println("done");
-    #if HAS_OLED
-        if (OLED)
-        {
-            display.println("bereit");
-            display.display();
-        }
+    #if HAS_OLED        
+        display.println("bereit");
+        display.display();        
     #endif
 
     /* --- BH1750 init --- */
     #if HAS_LIGHTSENSOR
         Serial.print("BH1750 init ... ");
-        #if HAS_OLED
-            if (OLED)
-            {
-                display.print("BH1750 init...");
-                display.display();
-            }
+        #if HAS_OLED           
+            display.print("BH1750 init...");
+            display.display();           
         #endif
         /* for normal sensor resolution (1 lx resolution, 0-65535 lx, 120ms, no PowerDown) use: bh1750.begin(RESOLUTION_NORMAL, false); */
         if (bh1750.begin())
         {
             BH1750 = true; //sensor found on 0x23 or 0x5C
             Serial.println("done");
-            #if HAS_OLED
-                if (OLED)
-                {
-                    display.println("bereit");
-                    display.display();
-                }
+            #if HAS_OLED                
+                display.println("bereit");
+                display.display();                
             #endif
         }
         else
         {
-            #if HAS_OLED
-                if (OLED)
-                {
-                    display.println("fehlt.");
-                    display.display();
-                }
+            #if HAS_OLED                
+                display.println("fehlt.");
+                display.display();                
             #endif
             Serial.println("not present");
             BH1750 = false;
         }
     #endif
 
-    blink(LEDpin, 3, 250); //setup success
+    blink(LEDpin, 3, 250); //--- setup success
 
     Serial.println("Ready, start measuring ...");
     Serial.println("");
 
-    #if HAS_OLED
-        if (OLED)
-        {
-            display.print("Starte Messungen ...");
-            display.display();
-            sleep(5000); //time to read display messages
-            display.clearDisplay();
-            display.display();
-        }
+    #if HAS_OLED       
+        display.print("Starte Messungen ...");
+        display.display();
+        sleep(5000); //time to read display messages
+        display.clearDisplay();
+        display.display();       
     #endif
 
-    /* main loop */
+    /* main loop in output_ready, not in loop*/
     /* Call to endless loop function which reads and processes data based on sensor settings */
     /* State is saved every 10.000 samples, which means every 10.000 * 3 secs = 500 minutes  */    
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1031,8 +999,11 @@ void setup()
 // Add the main program code into the continuous loop() function
 void loop()
 {
-
-    //if BME680 has an error during setup
+    //--- if BME680 has an error during setup, signal through blinking LED
     blink(LEDpin, 3, 250); //BME680 setup not successful
     sleep(1000);
 }
+/*----------------------------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------------------------*/
+/* <eot> */
+/*----------------------------------------------------------------------------------------------*/
