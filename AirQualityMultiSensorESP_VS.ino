@@ -628,28 +628,23 @@ void serviceAlive()
 #endif
 /*----------------------------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------------------------*/
-
-
-
-/*----------------------------------------------------------------------------------------------*/
 // The setup() function runs once each time the micro-controller starts
 void setup()
 {
-    /* get bsec version */
-    bsec_version_t  version;
+    bsec_version_t  version;        // get bsec version 
     bsec_get_version(&version);
     pinMode(LEDpin, OUTPUT);
-    digitalWrite(LEDpin, HIGH); //LED is low activ !
+    digitalWrite(LEDpin, HIGH);     //LED is low activ !
 
-#if DEBUG
-    eeprom.SetDebugMode(true);
-#if HAS_RFM69
-    rfm.SetDebugMode(true);
-#endif
-#endif
+    #if DEBUG
+        eeprom.SetDebugMode(true);
+        #if HAS_RFM69
+            rfm.SetDebugMode(true);    
+        #endif
+    #endif 
 
     Serial.begin(115200);
-    sleep(6000); //some time to open the terminalprogram ;o)
+    sleep(6000);        //some time to open the terminalprogram ;o)
 
     Serial.println("");
     Serial.print("BME680 wireless sensor V");
@@ -675,8 +670,12 @@ void setup()
 #endif
     Serial.println();
 
-    /* init I2C */
-    Wire.begin();
+    //--- init standard I2C 
+    //Wire.begin();
+
+    //--- enable I2C for ESP8266 NodeMCU boards [VDD to 3V3, GND to GND, SDA to D2, SCL to D1]
+    Wire.begin(SDA, SCL);
+    Wire.setClockStretchLimit(1000); // Default is 230us, see line78 of https://github.com/esp8266/Arduino/blob/master/cores/esp8266/core_esp8266_si2c.c
 
     //--- nicht für STM32
 #ifdef ESP8266
@@ -724,23 +723,20 @@ void setup()
     eeprom.RestoreDefaults();
 
     /*** read settings from EEPROM ***/
-    NODEID = eeprom.ReadNodeID();
-    ALTITUDE = eeprom.ReadAltitude();
+    NODEID     = eeprom.ReadNodeID();
+    ALTITUDE   = eeprom.ReadAltitude();
     TEMPOFFSET = eeprom.ReadTempOffset();
 
     /*** if no or not all values stored in EEPROM, edit settings ***/
     if (NODEID == 0xFF || ALTITUDE == 65560.5 || (TEMPOFFSET > -1.2 && TEMPOFFSET < -1.0))
     {
-#if HAS_OLED
-        if (OLED)
-        {
+        #if HAS_OLED
             display.setCursor(0, 0);
             display.clearDisplay();
             display.println("   *** SETUP ***");
             display.println();
             display.display();
-        }
-#endif
+        #endif
 
         /*** edit nodeID ***/
         if (NODEID == 0xFF)
@@ -762,14 +758,11 @@ void setup()
         Serial.println("Settings from EEPROM:");
 
     #if HAS_OLED
-        if (OLED)
-        {
-            display.setCursor(0, 0);
-            display.clearDisplay();
-            display.println("   *** KONFIG ***   ");
-            display.println();
-            display.display();
-        }
+        display.setCursor(0, 0);
+        display.clearDisplay();
+        display.println("   *** KONFIG ***   ");
+        display.println();
+        display.display();
     #endif
     }
 
@@ -908,6 +901,42 @@ void setup()
         display.display();
     #endif
 
+
+    //--- Wifi-stuff
+    //--- fetches ssid and pass from eeprom and tries to connect
+    //--- opens an AP (ESP+ChipID), enable WiFi setup at 192.168.4.1
+    //--- reboots if credentials are set
+    WiFiManager wifiManager;
+    //--- uncomment and run it once, if you want to erase all the stored information
+    //--- wifiManager.resetSettings();
+    wifiManager.setTimeout(1); // TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    wifiManager.autoConnect();
+
+    // restart watchdog as a safety measure. 
+    // its unknown how much time we spend in connect - but the wdt triggers after 3.5 sec
+    ESP.wdtFeed();
+    ESP.wdtEnable(0);
+
+    Udp.begin(portMulti);
+    DEBUG_PRINT("connected. device ip: " + WiFi.localIP());
+
+    sprintf(serviceMsg, "F:SERVICE;START:%s;", ESP.getResetReason().c_str());
+    serviceMessageTimer.attach(60, serviceAlive);
+
+    #if HAS_IAQ_CORE
+        iaqcore.begin();
+        prevIaqMillis = millis() - intervalIaq + 500;  // first Iaq reading 500 msec after startup
+    #endif 
+
+    #if HAS_DHT22
+        dht.begin();
+        prevDhtMillis = millis() - intervalDht + 1000;  // first Dht reading 1 sec after startup
+    #endif 
+
+    #if HAS_LDR
+        prevLdrMillis = millis() - intervalLdr + 200;  // first LDR reading 200 msec after startup
+    #endif 
+
     /* Call to the function which initializes the BSEC library
     * Switch on low-power mode and provide no temperature offset
     * for UltraLowPower Mode change following line to:
@@ -1003,6 +1032,11 @@ void loop()
     blink(LEDpin, 3, 250); //BME680 setup not successful
     sleep(1000);
 }
+/*----------------------------------------------------------------------------------------------*/
+void prepareMessage(char* payload) {
+    sprintf(message, "T:IAQC;FW:1.0;ID:%06X;IP:%s;R:%ld;%s", ESP.getChipId(), WiFi.localIP().toString().c_str(), WiFi.RSSI(), payload);
+    Serial.println(message);
+};
 /*----------------------------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------------------------*/
 /* <eot> */
